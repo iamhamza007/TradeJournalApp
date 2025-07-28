@@ -1,0 +1,33 @@
+{
+    "symbol": "BTCUSD",
+    "position": "Long",
+    "entry": 100.0,
+    "exit": 110.0,
+    "sl": 98.0,
+    "tp": 110.0,
+    "lot_size": 1.0,
+    "commission": 0.0,
+    "pips": 10.0,
+    "pnl": 10.0,
+    "rrr": 5.0,
+    "trade_number": "d100",
+    "position_id": "3243",
+    "rating": 5,
+    "notes": "",
+    "entry_time": "07/07/2025 17:50:31",
+    "exit_time": "07/07/2025 22:55:00",
+    "duration": "5:04:29",
+    "strategies": [],
+    "reflection": {
+        "Followed your trading plan?": true,
+        "Avoided FOMO?": true,
+        "Clear and valid setup?": true,
+        "No revenge trading?": false,
+        "Proper risk taken?": false
+    },
+    "reflection_notes": "",
+    "pdf_name": "BTCUSD_20250728231928.pdf",
+    "screenshot": null,
+    "trade_type": "Demo",
+    "time": "20250728231928"
+}
