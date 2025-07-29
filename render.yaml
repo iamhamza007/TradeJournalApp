@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: trade-journal-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run tradejournal.py
+    envVars:
+      - key: SUPABASE_URL
+        value: https://obzztuakskphspfjouvv.supabase.co
+      - key: SUPABASE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ienp0dWFrc2twaHNwZmpvdXZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2OTIwNjgsImV4cCI6MjA2OTI2ODA2OH0.kFZsRSdyF9aQ26_zOTKRpZCnz3dn5vqw5MqtoJPhwL0
+
