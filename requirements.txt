@@ -1,7 +1,10 @@
 streamlit
-supabase
 pandas
+matplotlib
 plotly
 fpdf
-requests
+pillow
 pytz
+requests
+streamlit-autorefresh
+supabase
