@@ -515,7 +515,9 @@ if tab == "📘 Journal":
             duration = str(exit_dt - entry_dt)
 
             pdf_name = sanitize_text(pdf_name_input) if pdf_name_input else f"{sanitize_text(symbol)}_{now}"
-            pdf_filename = f"{user_id}/{pdf_name}.pdf"  # Organize by user_id
+            folder = "real" if st.session_state.get("mode", "Demo") == "Real" else "demo"
+            pdf_filename = f"{folder}/{pdf_name}.pdf"  # Save in demo/ or real/
+
 
             # Verify buckets exist
             try:
@@ -1473,134 +1475,81 @@ elif tab == "🧪 Strategy Builder":
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error deleting strategy: {e}")
-                    
-elif tab == "📁 Trade Archive":
-    st.header(f"📁 {mode} Trade Archive")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
 
-    try:
-        trades = supabase.table("trades").select("*").eq("trade_type", mode).eq("user_id", user_id).execute().data
-        trades = sorted(trades, key=lambda x: x["time"], reverse=True)
-    except Exception as e:
-        st.error(f"Error fetching trades: {e}")
-        trades = []
+import streamlit as st
+from supabase import create_client
+from datetime import datetime
+import re
 
-    if not trades:
-        st.info("No trades found for this mode.")
+# --- Supabase Setup ---
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --- Bucket + Folder ---
+PDF_BUCKET = "pdfs"
+mode = st.session_state.get("mode", "Demo")
+PDF_FOLDER = "real" if mode == "Real" else "demo"
+
+# --- Trade Archive Tab ---
+if tab == "📁 Trade Archive":
+    st.title(f"📁 {mode} Trade Archive")
+
+    with st.spinner("Loading trade PDFs from Supabase..."):
+        response = supabase.storage.from_(PDF_BUCKET).list(path=PDF_FOLDER)
+
+    if not response or not isinstance(response, list) or len(response) == 0:
+        st.warning("No PDFs found in the archive.")
     else:
-        # Verify pdfs bucket existence
-        try:
-            buckets = supabase.storage.list_buckets()
-            bucket_names = [bucket.name for bucket in buckets]
-            st.write(f"DEBUG: Available buckets: {bucket_names}")
-            if "pdfs" not in bucket_names:
-                st.error("❌ Required bucket 'pdfs' not found in Supabase. Please create it.")
-                st.stop()
-        except Exception as e:
-            st.error(f"Error checking pdfs bucket: {e}")
-            st.error("Please check SUPABASE_URL, SUPABASE_KEY, and storage permissions.")
-            st.stop()
+        file_names = [f["name"].strip() for f in response if f["name"].endswith(".pdf")]
 
-        for trade in trades:
-            logo_path = f"logos/{sanitize_text(trade['symbol'])}.png"
-            symbol_logo = ""
-            if os.path.exists(logo_path):
-                with open(logo_path, "rb") as img:
-                    symbol_logo = base64.b64encode(img.read()).decode("utf-8")
+        trades = []
+        for f in file_names:
+            date_match = re.search(r"(\d{8})", f)
+            formatted_date = "Unknown"
+            if date_match:
+                try:
+                    formatted_date = datetime.strptime(date_match.group(1), "%Y%m%d").strftime("%d %b %Y")
+                except:
+                    pass
 
-            pnl_color = "lime" if trade["pnl"] >= 0 else "red"
-            direction = "Buy" if trade["position"] == "Long" else "Sell"
-            direction_color = "green" if direction == "Buy" else "red"
+            pair_match = re.match(r"([A-Z]+)_", f)
+            pair = pair_match.group(1) if pair_match else "Unknown"
 
-            sl_hit = abs(trade["exit"] - trade["sl"]) < abs(trade["exit"] - trade["tp"])
-            tp_hit = abs(trade["exit"] - trade["tp"]) < abs(trade["exit"] - trade["sl"])
-            sl_color = "red" if sl_hit else "#555"
-            tp_color = "green" if tp_hit else "#555"
+            trades.append({
+                "file": f,
+                "pair": pair,
+                "date": formatted_date
+            })
 
-            with st.container():
-                st.markdown(
-                    f"""
-                    <div style='display:flex; align-items:center; gap:8px; padding:10px; background:#111; border-radius:8px;'>
-                        <img src='data:image/png;base64,{symbol_logo}' width='20'>
-                        <b>{trade['symbol']}</b> | 
-                        <b style='color:{direction_color}'>{direction}</b> |
-                        {trade['entry']} ➜ {trade['exit']} |
-                        💰 <span style='color:{pnl_color};'>${trade['pnl']:.2f}</span> |
-                        <span style='color:{sl_color}; font-weight:bold;'>🛑 SL</span> |
-                        <span style='color:{tp_color}; font-weight:bold;'>🎯 TP</span> |
-                        🔢 {trade['lot_size']} lots
-                    </div>
-                    """, unsafe_allow_html=True
-                )
-                with st.expander(f"🔍 View Trade {trade['trade_number']} Details"):
-                    st.write(f"**Trade Number:** {trade['trade_number']}")
-                    st.write(f"**Position ID:** {trade['position_id']}")
-                    st.write(f"**Entry Time:** {trade['entry_time']}")
-                    st.write(f"**Exit Time:** {trade['exit_time']}")
-                    st.write(f"**Duration:** {trade['duration']}")
-                    st.write(f"**Commission:** ${trade['commission']}")
-                    st.write(f"**Rating:** {trade['rating']}/10")
-                    st.write(f"**SL:** {trade['sl']} | **TP:** {trade['tp']}")
-                    st.write(f"**Risk–Reward Ratio:** {trade.get('rrr', '-')}")
-                    st.write(f"**Pips:** {trade['pips']}")
-                    st.markdown(f"**Strategies:** {', '.join(trade['strategies'])}")
-                    st.markdown(f"**Reflection:**")
-                    for q, v in trade.get("reflection", {}).items():
-                        st.write(f"- {q}: {'✅' if v else '❌'}")
-                    st.markdown(f"**Reflection Notes:** {trade.get('reflection_notes', '-')}")
-                    if trade.get("screenshot"):
-                        try:
-                            screenshot_name = trade["screenshot"].split("/")[-1]
-                            screenshot_path = f"{user_id}/{screenshot_name}"
-                            st.write(f"DEBUG: Loading screenshot: {screenshot_path}")
-                            signed_url = supabase.storage.from_("screenshots").create_signed_url(screenshot_path, expires_in=60)["signedURL"]
-                            st.image(signed_url)
-                        except Exception as e:
-                            st.warning(f"⚠️ Screenshot not found for trade {trade['trade_number']}: {e} (Path: {screenshot_path})")
-                    if trade.get("pdf_name"):
-                        try:
-                            # Normalize pdf_path
-                            pdf_path = trade["pdf_name"].replace("//", "/").strip("/")
-                            pdf_filename = pdf_path.split("/")[-1]
-                            st.write(f"DEBUG: Attempting PDF retrieval from pdfs bucket: {pdf_path}")
-                            # Retrieve PDF directly using signed URL
-                            signed_url = supabase.storage.from_("pdfs").create_signed_url(pdf_path, expires_in=60)["signedURL"]
-                            response = requests.get(signed_url, timeout=5)
-                            response.raise_for_status()  # Raise exception for 404 or other errors
-                            pdf_data = response.content
-                            st.download_button(
-                                label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
-                                data=pdf_data,
-                                file_name=pdf_filename,
-                                mime="application/pdf"
-                            )
-                        except Exception as e:
-                            st.warning(f"⚠️ Unable to download PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
-                    else:
-                        st.info("ℹ️ No PDF available for this trade.")
-                    if st.button(f"🗑️ Delete Trade {trade['trade_number']}", key=f"delete_{trade['time']}"):
-                        try:
-                            if trade.get("pdf_name"):
-                                try:
-                                    supabase.storage.from_("pdfs").remove([trade["pdf_name"]])
-                                    st.write(f"DEBUG: Deleted PDF: {trade['pdf_name']}")
-                                except Exception as e:
-                                    st.warning(f"⚠️ Failed to delete PDF {trade['pdf_name']}: {e}")
-                            if trade.get("screenshot"):
-                                try:
-                                    screenshot_name = trade["screenshot"].split("/")[-1]
-                                    screenshot_path = f"{user_id}/{screenshot_name}"
-                                    supabase.storage.from_("screenshots").remove([screenshot_path])
-                                    st.write(f"DEBUG: Deleted screenshot: {screenshot_path}")
-                                except Exception as e:
-                                    st.warning(f"⚠️ Failed to delete screenshot {screenshot_path}: {e}")
-                            supabase.table("trades").delete().eq("time", trade["time"]).eq("user_id", user_id).execute()
-                            st.success(f"✅ Trade {trade['trade_number']} deleted")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error deleting trade: {e}")
+        pairs = sorted(list(set([t["pair"] for t in trades])))
+        dates = sorted(list(set([t["date"] for t in trades if t["date"] != "Unknown"])), reverse=True)
+
+        selected_pair = st.selectbox("📌 Filter by Pair", ["All"] + pairs)
+        selected_date = st.selectbox("📅 Filter by Date", ["All"] + dates)
+
+        filtered_trades = [
+            t for t in trades
+            if (selected_pair == "All" or t["pair"] == selected_pair)
+            and (selected_date == "All" or t["date"] == selected_date)
+        ]
+
+        if not filtered_trades:
+            st.warning("No trades match your selected filters.")
+        else:
+            for trade in sorted(filtered_trades, key=lambda x: x["file"], reverse=True):
+                full_path = f"{PDF_FOLDER}/{trade['file']}"
+                public_url = supabase.storage.from_(PDF_BUCKET).get_public_url(full_path)
+
+                col1, col2, col3 = st.columns([5, 1.5, 1.5])
+                col1.markdown(f"**{trade['pair']} | {trade['date']}**<br>`{trade['file']}`", unsafe_allow_html=True)
+                col2.markdown(f"[⬇️ Download]({public_url})", unsafe_allow_html=True)
+                with col3.expander("🔍 Preview"):
+                    st.markdown(
+                        f'<iframe src="{public_url}" width="100%" height="500px" style="border:1px solid #ccc;"></iframe>',
+                        unsafe_allow_html=True
+                    )
+
 
 elif tab == "💸 Deposits & Withdrawals":
     st.header(f"💸 {mode} Deposits & Withdrawals")
