@@ -1473,7 +1473,7 @@ elif tab == "🧪 Strategy Builder":
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error deleting strategy: {e}")
-
+                    
 elif tab == "📁 Trade Archive":
     st.header(f"📁 {mode} Trade Archive")
     user_id = check_authentication()
@@ -1490,16 +1490,16 @@ elif tab == "📁 Trade Archive":
     if not trades:
         st.info("No trades found for this mode.")
     else:
-        # Verify bucket existence
+        # Verify pdfs bucket existence
         try:
             buckets = supabase.storage.list_buckets()
             bucket_names = [bucket.name for bucket in buckets]
-            st.write(f"DEBUG: Available buckets: {bucket_names}")  # Debug logging
-            if "pdfs" not in bucket_names or "screenshots" not in bucket_names:
-                st.error("❌ Required buckets ('pdfs' or 'screenshots') not found in Supabase. Please create them.")
+            st.write(f"DEBUG: Available buckets: {bucket_names}")
+            if "pdfs" not in bucket_names:
+                st.error("❌ Required bucket 'pdfs' not found in Supabase. Please create it.")
                 st.stop()
         except Exception as e:
-            st.error(f"Error checking storage buckets: {e}")
+            st.error(f"Error checking pdfs bucket: {e}")
             st.error("Please check SUPABASE_URL, SUPABASE_KEY, and storage permissions.")
             st.stop()
 
@@ -1554,6 +1554,7 @@ elif tab == "📁 Trade Archive":
                         try:
                             screenshot_name = trade["screenshot"].split("/")[-1]
                             screenshot_path = f"{user_id}/{screenshot_name}"
+                            st.write(f"DEBUG: Loading screenshot: {screenshot_path}")
                             signed_url = supabase.storage.from_("screenshots").create_signed_url(screenshot_path, expires_in=60)["signedURL"]
                             st.image(signed_url)
                         except Exception as e:
@@ -1563,33 +1564,20 @@ elif tab == "📁 Trade Archive":
                             # Normalize pdf_path
                             pdf_path = trade["pdf_name"].replace("//", "/").strip("/")
                             pdf_filename = pdf_path.split("/")[-1]
-                            st.write(f"DEBUG: Checking PDF: {pdf_path}, Expected filename: {pdf_filename}")  # Debug
-                            file_list = supabase.storage.from_("pdfs").list(path=user_id)
-                            file_names = [f["name"] for f in file_list if "name" in f]
-                            st.write(f"DEBUG: Files in pdfs/{user_id}: {file_names}")  # Debug
-                            if pdf_filename not in file_names:
-                                st.warning(f"⚠️ PDF not found in bucket for trade {trade['trade_number']}: {pdf_path}")
-                                # Attempt download anyway
-                                try:
-                                    pdf_data = supabase.storage.from_("pdfs").download(pdf_path)
-                                    st.download_button(
-                                        label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
-                                        data=pdf_data,
-                                        file_name=pdf_filename,
-                                        mime="application/pdf"
-                                    )
-                                except Exception as e:
-                                    st.warning(f"⚠️ Unable to download PDF: {e} (Path: {pdf_path})")
-                            else:
-                                pdf_data = supabase.storage.from_("pdfs").download(pdf_path)
-                                st.download_button(
-                                    label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
-                                    data=pdf_data,
-                                    file_name=pdf_filename,
-                                    mime="application/pdf"
-                                )
+                            st.write(f"DEBUG: Attempting PDF retrieval from pdfs bucket: {pdf_path}")
+                            # Retrieve PDF directly using signed URL
+                            signed_url = supabase.storage.from_("pdfs").create_signed_url(pdf_path, expires_in=60)["signedURL"]
+                            response = requests.get(signed_url, timeout=5)
+                            response.raise_for_status()  # Raise exception for 404 or other errors
+                            pdf_data = response.content
+                            st.download_button(
+                                label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
+                                data=pdf_data,
+                                file_name=pdf_filename,
+                                mime="application/pdf"
+                            )
                         except Exception as e:
-                            st.warning(f"⚠️ Unable to process PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
+                            st.warning(f"⚠️ Unable to download PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
                     else:
                         st.info("ℹ️ No PDF available for this trade.")
                     if st.button(f"🗑️ Delete Trade {trade['trade_number']}", key=f"delete_{trade['time']}"):
@@ -1597,6 +1585,7 @@ elif tab == "📁 Trade Archive":
                             if trade.get("pdf_name"):
                                 try:
                                     supabase.storage.from_("pdfs").remove([trade["pdf_name"]])
+                                    st.write(f"DEBUG: Deleted PDF: {trade['pdf_name']}")
                                 except Exception as e:
                                     st.warning(f"⚠️ Failed to delete PDF {trade['pdf_name']}: {e}")
                             if trade.get("screenshot"):
@@ -1604,6 +1593,7 @@ elif tab == "📁 Trade Archive":
                                     screenshot_name = trade["screenshot"].split("/")[-1]
                                     screenshot_path = f"{user_id}/{screenshot_name}"
                                     supabase.storage.from_("screenshots").remove([screenshot_path])
+                                    st.write(f"DEBUG: Deleted screenshot: {screenshot_path}")
                                 except Exception as e:
                                     st.warning(f"⚠️ Failed to delete screenshot {screenshot_path}: {e}")
                             supabase.table("trades").delete().eq("time", trade["time"]).eq("user_id", user_id).execute()
