@@ -1494,11 +1494,13 @@ elif tab == "📁 Trade Archive":
         try:
             buckets = supabase.storage.list_buckets()
             bucket_names = [bucket.name for bucket in buckets]
+            st.write(f"DEBUG: Available buckets: {bucket_names}")  # Debug logging
             if "pdfs" not in bucket_names or "screenshots" not in bucket_names:
                 st.error("❌ Required buckets ('pdfs' or 'screenshots') not found in Supabase. Please create them.")
                 st.stop()
         except Exception as e:
             st.error(f"Error checking storage buckets: {e}")
+            st.error("Please check SUPABASE_URL, SUPABASE_KEY, and storage permissions.")
             st.stop()
 
         for trade in trades:
@@ -1550,36 +1552,48 @@ elif tab == "📁 Trade Archive":
                     st.markdown(f"**Reflection Notes:** {trade.get('reflection_notes', '-')}")
                     if trade.get("screenshot"):
                         try:
-                            # Use signed URL for screenshot display if public access fails
                             screenshot_name = trade["screenshot"].split("/")[-1]
                             screenshot_path = f"{user_id}/{screenshot_name}"
                             signed_url = supabase.storage.from_("screenshots").create_signed_url(screenshot_path, expires_in=60)["signedURL"]
                             st.image(signed_url)
-                        except:
-                            st.warning(f"⚠️ Screenshot not found for trade {trade['trade_number']}: {screenshot_path}")
+                        except Exception as e:
+                            st.warning(f"⚠️ Screenshot not found for trade {trade['trade_number']}: {e} (Path: {screenshot_path})")
                     if trade.get("pdf_name"):
                         try:
-                            # Verify PDF exists before downloading
-                            pdf_path = trade["pdf_name"]  # e.g., 7265d9ec-8e98-4359-8849-9ece28234540/XAUUSD_20250729052627.pdf
+                            # Normalize pdf_path
+                            pdf_path = trade["pdf_name"].replace("//", "/").strip("/")
+                            pdf_filename = pdf_path.split("/")[-1]
+                            st.write(f"DEBUG: Checking PDF: {pdf_path}, Expected filename: {pdf_filename}")  # Debug
                             file_list = supabase.storage.from_("pdfs").list(path=user_id)
                             file_names = [f["name"] for f in file_list if "name" in f]
-                            if pdf_path.split("/")[-1] not in file_names:
+                            st.write(f"DEBUG: Files in pdfs/{user_id}: {file_names}")  # Debug
+                            if pdf_filename not in file_names:
                                 st.warning(f"⚠️ PDF not found in bucket for trade {trade['trade_number']}: {pdf_path}")
+                                # Attempt download anyway
+                                try:
+                                    pdf_data = supabase.storage.from_("pdfs").download(pdf_path)
+                                    st.download_button(
+                                        label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
+                                        data=pdf_data,
+                                        file_name=pdf_filename,
+                                        mime="application/pdf"
+                                    )
+                                except Exception as e:
+                                    st.warning(f"⚠️ Unable to download PDF: {e} (Path: {pdf_path})")
                             else:
                                 pdf_data = supabase.storage.from_("pdfs").download(pdf_path)
                                 st.download_button(
                                     label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
                                     data=pdf_data,
-                                    file_name=pdf_path.split("/")[-1],  # Strip user_id/ for download
+                                    file_name=pdf_filename,
                                     mime="application/pdf"
                                 )
                         except Exception as e:
-                            st.warning(f"⚠️ Unable to download PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
+                            st.warning(f"⚠️ Unable to process PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
                     else:
                         st.info("ℹ️ No PDF available for this trade.")
                     if st.button(f"🗑️ Delete Trade {trade['trade_number']}", key=f"delete_{trade['time']}"):
                         try:
-                            # Delete PDF and screenshot with full paths
                             if trade.get("pdf_name"):
                                 try:
                                     supabase.storage.from_("pdfs").remove([trade["pdf_name"]])
