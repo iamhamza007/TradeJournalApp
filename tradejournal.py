@@ -28,6 +28,13 @@ supabase: Client = get_supabase_client()
 # Page config
 st.set_page_config(page_title="📘 Trade Journal", layout="wide")
 
+st.set_page_config(
+    page_title="Trade Journal",
+    page_icon="images/favicon.png",  # Relative path to the favicon
+    layout="wide"
+)
+
+
 # Login form
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
@@ -184,44 +191,58 @@ def pnl_class(pnl):
         return "red-card"
     return ""
 
+import streamlit as st
+import streamlit.components.v1 as components
+
 # Clock display
 with st.container():
     components.html("""
     <style>
     .clock-container {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
         justify-content: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-top: 10px;
+        margin: 8px 4px;
+        padding-bottom: 12px;
         font-family: 'Montserrat', sans-serif;
+        max-width: 100%;
     }
     .clock-card {
         background: #f9f9f9;
-        padding: 10px 14px;
-        border-radius: 12px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        padding: 5px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         text-align: center;
-        min-width: 90px;
+        width: 100%;
         max-width: 100px;
-        transition: transform 0.2s ease;
-    }
-    .clock-card:hover {
-        transform: translateY(-2px);
+        margin: 0 auto;
+        box-sizing: border-box;
     }
     .clock-flag {
-        font-size: 18px;
+        font-size: 12px;
         margin-bottom: 2px;
     }
     .clock-label {
         font-weight: 600;
-        font-size: 13px;
+        font-size: 10px;
         margin-bottom: 2px;
     }
     .clock-time {
-        font-size: 14px;
+        font-size: 11px;
         color: #333;
         font-weight: 500;
+    }
+    @media (max-width: 600px) {
+        .clock-container {
+            gap: 24px;
+            margin: 6px 2px;
+            padding-bottom: 10px;
+        }
+        .clock-card {
+            max-width: 100px;
+            padding: 5px;
+        }
     }
     </style>
     <div class="clock-container">
@@ -264,19 +285,22 @@ with st.container():
     setInterval(updateClocks, 1000);
     updateClocks();
     </script>
-    """, height=160)
+    """, height=180)
 
-# Metric cards
+# Metric cards (unchanged)
 def box_style(bg_color):
     return f"""
         background-color: {bg_color};
-        padding: 6px 4px;
-        border-radius: 10px;
+        padding: 10px 8px;
+        border-radius: 8px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.06);
         text-align: center;
         font-weight: 500;
         font-size: 13px;
-        line-height: 1.2;
+        line-height: 1.4;
+        margin-bottom: 10px;
+        width: 100%;
+        box-sizing: border-box;
     """
 
 def get_pnl_color(pnl):
@@ -289,33 +313,70 @@ colors = {
     "neutral": "#f0f0f0"
 }
 
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f"<div style='{box_style(colors['balance'])} color:#1a7f2e;'>"
-                f"<b>💰 {mode} Balance</b><br>${current_balance:.2f}</div>", unsafe_allow_html=True)
-with col2:
-    st.markdown(f"<div style='{box_style(colors['pnl'])} {get_pnl_color(total_pnl)}'>"
-                f"<b>📈 Total PnL</b><br>${total_pnl:.2f}</div>", unsafe_allow_html=True)
-with col3:
-    st.markdown(f"<div style='{box_style(colors['pnl'])} {get_pnl_color(today_pnl)}'>"
-                f"<b>📆 Today's PnL</b><br>${today_pnl:.2f}</div>", unsafe_allow_html=True)
-with col4:
-    st.markdown(f"<div style='{box_style(colors['pips'])} color:#a67c00;'>"
-                f"<b>📊 Total Pips</b><br>{total_pips:.1f} pips</div>", unsafe_allow_html=True)
+# Custom CSS for metric cards layout
+st.markdown("""
+<style>
+@media (max-width: 600px) {
+    .stColumn > div {
+        width: 100% !important;
+        margin-bottom: 10px;
+    }
+}
+.metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 10px 4px;
+}
+.last-metric-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 33.33%;
+    margin: 10px auto;
+}
+@media (max-width: 600px) {
+    .metric-row {
+        grid-template-columns: 1fr;
+    }
+    .last-metric-row {
+        max-width: 100%;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+# First row of metric cards (3 cards)
+with st.container():
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        st.markdown(f"<div style='{box_style(colors['balance'])} color:#1a7f2e;'>"
+                    f"<b>💰 {mode} Balance</b><br>${current_balance:.2f}</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<div style='{box_style(colors['pnl'])} {get_pnl_color(total_pnl)}'>"
+                    f"<b>📈 Total PnL</b><br>${total_pnl:.2f}</div>", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"<div style='{box_style(colors['pnl'])} {get_pnl_color(today_pnl)}'>"
+                    f"<b>📆 Today's PnL</b><br>${today_pnl:.2f}</div>", unsafe_allow_html=True)
 
-col5, col6, col7 = st.columns(3)
-with col5:
-    st.markdown(f"<div style='{box_style(colors['pips'])} color:#a67c00;'>"
-                f"<b>📅 Today's Pips</b><br>{today_pips:.1f} pips</div>", unsafe_allow_html=True)
-with col6:
-    st.markdown(f"<div style='{box_style(colors['neutral'])} color:#333;'>"
-                f"<b>✅ Wins vs Losses</b><br>{wins} Wins | {losses} Losses</div>", unsafe_allow_html=True)
-with col7:
-    st.markdown(f"<div style='{box_style(colors['neutral'])} color:#333;'>"
-                f"<b>🗓 Last Trade</b><br>{last_trade}</div>", unsafe_allow_html=True)
+# Second row of metric cards (3 cards)
+with st.container():
+    col4, col5, col6 = st.columns([1, 1, 1])
+    with col4:
+        st.markdown(f"<div style='{box_style(colors['pips'])} color:#a67c00;'>"
+                    f"<b>📊 Total Pips</b><br>{total_pips:.1f} pips</div>", unsafe_allow_html=True)
+    with col5:
+        st.markdown(f"<div style='{box_style(colors['pips'])} color:#a67c00;'>"
+                    f"<b>📅 Today's Pips</b><br>{today_pips:.1f} pips</div>", unsafe_allow_html=True)
+    with col6:
+        st.markdown(f"<div style='{box_style(colors['neutral'])} color:#333;'>"
+                    f"<b>✅ Wins vs Losses</b><br>{wins} Wins | {losses} Losses</div>", unsafe_allow_html=True)
 
+# Last row of metric cards (1 card, centered)
+with st.container():
+    st.markdown(f"<div class='last-metric-row'><div style='{box_style(colors['neutral'])} color:#333;'>"
+                f"<b>🗓 Last Trade</b><br>{last_trade}</div></div>", unsafe_allow_html=True)
+                
+                
 # Tabs
 tabs = [
     "📘 Journal", "🔥 Streak Tracker",
@@ -385,11 +446,11 @@ if tab == "📘 Journal":
             pass
 
     pair_multipliers = {
-        "XAUUSD": 10,
-        "BTCUSD": 1,
-        "EURUSD": 100000,
-        "USDJPY": 100000,
-        "GBPUSD": 100000
+        "XAUUSD": 10,  # 1 pip = 0.1 price movement, $10 per pip per lot
+        "BTCUSD": 1,   # 1 pip = 1 price movement
+        "EURUSD": 10000,  # 1 pip = 0.0001 price movement
+        "USDJPY": 100,    # 1 pip = 0.01 price movement
+        "GBPUSD": 10000   # 1 pip = 0.0001 price movement
     }
 
     st.markdown("### 🎯 Select Strategy Hashtags (Multiple):")
@@ -434,36 +495,56 @@ if tab == "📘 Journal":
                 entry_dt = datetime.datetime.strptime(entry_str, "%d/%m/%Y %H:%M:%S")
                 exit_dt = datetime.datetime.strptime(exit_str, "%d/%m/%Y %H:%M:%S")
             except:
-                st.error("❌ Invalid Date-Time format")
+                st.error("❌ Invalid Date-Time format. Use DD/MM/YYYY HH:MM:SS")
                 st.stop()
 
             now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             multiplier = pair_multipliers.get(symbol, 1)
             pip_diff = (exit - entry) if position == "Long" else (entry - exit)
             pips_captured = round(pip_diff * multiplier, 1)
-            size = lot * 1000
-            pnl = round(pips_captured * lot - abs(commission), 2)
+            if symbol == "XAUUSD":
+                # For XAUUSD: PnL = pips * lot * $10/pip - commission
+                pnl = round(pips_captured * lot * 10 - abs(commission), 2)
+            else:
+                # For other pairs: PnL = pips * lot * multiplier * pip_size ($1 per pip for forex)
+                pip_size = 0.0001 if symbol in ["EURUSD", "GBPUSD"] else 0.01 if symbol == "USDJPY" else 1
+                pnl = round(pips_captured * lot * pip_size * multiplier - abs(commission), 2)
             risk = abs(entry - sl)
             reward = abs(tp - entry)
             rrr = round(reward / risk, 2) if risk != 0 else None
             duration = str(exit_dt - entry_dt)
 
-            pdf_name = pdf_name_input if pdf_name_input else f"{symbol}_{now}".replace(" ", "_")
-            pdf_filename = f"{pdf_name}.pdf"
+            pdf_name = sanitize_text(pdf_name_input) if pdf_name_input else f"{sanitize_text(symbol)}_{now}"
+            pdf_filename = f"{user_id}/{pdf_name}.pdf"  # Organize by user_id
+
+            # Verify buckets exist
+            try:
+                buckets = supabase.storage.list_buckets()
+                bucket_names = [bucket.name for bucket in buckets]
+                if "screenshots" not in bucket_names or "pdfs" not in bucket_names:
+                    st.error("❌ Required buckets ('screenshots' or 'pdfs') not found in Supabase. Please create them.")
+                    st.stop()
+            except Exception as e:
+                st.error(f"Error checking storage buckets: {e}")
+                st.stop()
 
             screenshot_url = None
+            screenshot_path = None
             if screenshot:
                 try:
-                    buckets = supabase.storage.list_buckets()
-                    if 'screenshots' not in [b['name'] for b in buckets]:
-                        st.error("❌ Screenshots bucket not found. Please create it in Supabase.")
-                        st.stop()
-                    screenshot_name = f"screenshot_{now}.png"
+                    screenshot_path = f"{user_id}/screenshot_{now}.png"
                     file_data = screenshot.read()
-                    supabase.storage.from_("screenshots").upload(screenshot_name, file_data, {"content-type": screenshot.type})
-                    screenshot_url = supabase.storage.from_("screenshots").get_public_url(screenshot_name)
+                    supabase.storage.from_("screenshots").upload(screenshot_path, file_data, {"content-type": screenshot.type})
+                    # Verify screenshot upload
+                    file_list = supabase.storage.from_("screenshots").list(path=user_id)
+                    if screenshot_path.split("/")[-1] not in [f["name"] for f in file_list if "name" in f]:
+                        raise Exception("Screenshot not found in bucket after upload")
+                    # Use signed URL to avoid public access issues
+                    screenshot_url = supabase.storage.from_("screenshots").create_signed_url(screenshot_path, expires_in=60)["signedURL"]
                 except Exception as e:
-                    st.warning(f"⚠️ Failed to upload screenshot: {e}")
+                    st.warning(f"⚠️ Failed to upload screenshot to Supabase: {e} (Path: {screenshot_path})")
+                    screenshot_url = None
+                    screenshot_path = None
 
             trade = {
                 "symbol": symbol,
@@ -498,7 +579,7 @@ if tab == "📘 Journal":
                 supabase.table("trades").insert(trade).execute()
                 st.success(f"✅ Trade saved with PDF name: {pdf_filename}")
             except Exception as e:
-                st.error(f"Error saving trade: {e}")
+                st.error(f"Error saving trade to database: {e}")
                 st.stop()
 
             # PDF Export
@@ -508,72 +589,78 @@ if tab == "📘 Journal":
             if os.path.exists(logo_path):
                 pdf.image(logo_path, x=85, y=10, w=40)
             pdf.ln(50)
-            pdf.set_font("Times", 'BU', 16)
+            pdf.set_font("Times", "B", 16)
             pdf.set_text_color(0, 0, 0)
-            pdf.cell(200, 10, f"Trade Summary - {symbol} ({mode} Mode)", ln=True, align='C')
-            if position == "Long":
-                pdf.set_text_color(0, 200, 0)
-                pdf.set_font("Helvetica", 'B', 14)
-                pdf.cell(200, 10, "Position: LONG (Buy)", ln=True)
-            else:
-                pdf.set_text_color(200, 0, 0)
-                pdf.set_font("Helvetica", 'B', 14)
-                pdf.cell(200, 10, "Position: SHORT (Sell)", ln=True)
+            pdf.cell(0, 10, f"Trade Summary - {sanitize_text(symbol)} ({mode} Mode)", 0, 1, "C")
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.set_text_color(0, 200, 0) if position == "Long" else pdf.set_text_color(200, 0, 0)
+            pdf.cell(0, 10, f"Position: {'LONG (Buy)' if position == 'Long' else 'SHORT (Sell)'}", 0, 1)
             pdf.set_text_color(0)
-            pdf.set_font("Helvetica", '', 12)
-            pdf.cell(100, 10, f"Entry: {entry}", ln=True)
-            pdf.cell(100, 10, f"Exit: {exit}", ln=True)
-            pdf.cell(100, 10, f"SL: {sl}", ln=True)
-            pdf.cell(100, 10, f"TP: {tp}", ln=True)
-            pdf.cell(100, 10, f"Lot: {lot}", ln=True)
-            pdf.cell(100, 10, f"Session Traded: {session}", ln=True)
-            pdf.cell(100, 10, f"Commission: ${commission}", ln=True)
-            pdf.cell(100, 10, f"Pips Captured: {pips_captured}", ln=True)
+            pdf.set_font("Helvetica", "", 12)
+            pdf.cell(0, 8, f"Entry: {entry}", 0, 1)
+            pdf.cell(0, 8, f"Exit: {exit}", 0, 1)
+            pdf.cell(0, 8, f"SL: {sl}", 0, 1)
+            pdf.cell(0, 8, f"TP: {tp}", 0, 1)
+            pdf.cell(0, 8, f"Lot: {lot}", 0, 1)
+            pdf.cell(0, 8, f"Session Traded: {sanitize_text(session)}", 0, 1)
+            pdf.cell(0, 8, f"Commission: ${commission}", 0, 1)
+            pdf.cell(0, 8, f"Pips Captured: {pips_captured}", 0, 1)
             if rrr is not None:
                 pdf.set_text_color(0, 180, 0) if rrr >= 2 else pdf.set_text_color(200, 0, 0)
-                pdf.set_font("Helvetica", 'B', 12)
-                pdf.cell(100, 10, f"Risk-Reward: {rrr}", ln=True)
-            pdf.set_text_color(0)
-            pdf.set_font("Helvetica", 'B', 14)
+                pdf.cell(0, 8, f"Risk-Reward: {rrr}", 0, 1)
             pdf.set_text_color(0, 180, 0) if pnl >= 0 else pdf.set_text_color(200, 0, 0)
-            pdf.cell(200, 10, f"PnL: ${round(pnl, 2)}", ln=True)
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(0, 8, f"PnL: ${pnl}", 0, 1)
             pdf.set_text_color(0)
-            pdf.set_font("Helvetica", '', 12)
+            pdf.set_font("Helvetica", "", 12)
             pdf.multi_cell(0, 8, f"Entry Time: {entry_str}\nExit Time: {exit_str}\nDuration: {duration}")
             pdf.set_text_color(0, 0, 200)
-            pdf.set_font("Helvetica", 'U', 12)
-            pdf.cell(200, 10, f"Position ID: {position_id}", ln=True)
+            pdf.set_font("Helvetica", "U", 12)
+            pdf.cell(0, 8, f"Position ID: {sanitize_text(position_id)}", 0, 1)
             pdf.set_text_color(0)
-            pdf.set_font("Helvetica", '', 12)
+            pdf.set_font("Helvetica", "", 12)
             pdf.multi_cell(0, 8, f"Rating: {rating}/10")
-            pdf.multi_cell(0, 8, f"Strategies: {notes}")
+            pdf.multi_cell(0, 8, f"Strategies: {sanitize_text(notes)}")
             pdf.multi_cell(0, 8, "Reflection:")
             for q, ans in reflection.items():
-                pdf.multi_cell(0, 8, f"- {q}: {'Yes' if ans else 'No'}")
+                pdf.multi_cell(0, 8, f"- {sanitize_text(q)}: {'Yes' if ans else 'No'}")
             pdf.multi_cell(0, 8, "Reflection Notes:")
-            for line in reflection_notes.split('\n'):
-                pdf.multi_cell(0, 8, f"- {line.strip()}")
+            for line in reflection_notes.split("\n"):
+                pdf.multi_cell(0, 8, f"- {sanitize_text(line.strip())}")
 
-            if screenshot_url:
+            if screenshot_url and screenshot_path:
                 try:
-                    response = requests.get(screenshot_url)
-                    with open("temp_screenshot.png", "wb") as f:
-                        f.write(response.content)
-                    pdf.image("temp_screenshot.png", x=15, w=180)
-                    os.remove("temp_screenshot.png")
-                except:
-                    st.warning("⚠️ Screenshot could not be added in PDF")
+                    import tempfile
+                    response = requests.get(screenshot_url, timeout=5)
+                    response.raise_for_status()  # Raise exception for bad status codes
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+                        temp_file.write(response.content)
+                        temp_file_path = temp_file.name
+                    pdf.image(temp_file_path, x=15, w=180)
+                    os.remove(temp_file_path)
+                except Exception as e:
+                    st.warning(f"⚠️ Failed to add screenshot to PDF: {e} (URL: {screenshot_url}, Path: {screenshot_path})")
 
-            pdf_data = pdf.output(dest="S").encode("latin-1")
             try:
-                buckets = supabase.storage.list_buckets()
-                if 'pdfs' not in [b['name'] for b in buckets]:
-                    st.error("❌ PDFs bucket not found. Please create it in Supabase.")
-                    st.stop()
-                supabase.storage.from_("pdfs").upload(pdf_filename, pdf_data, {"content-type": "application/pdf"})
-                st.success(f"✅ PDF saved: {pdf_filename}")
+                pdf_data = pdf.output(dest="S").encode("latin-1", errors="ignore")
+                # Retry upload up to 3 times
+                for attempt in range(3):
+                    try:
+                        supabase.storage.from_("pdfs").upload(pdf_filename, pdf_data, {"content-type": "application/pdf"})
+                        # Verify PDF upload
+                        file_list = supabase.storage.from_("pdfs").list(path=user_id)
+                        if pdf_filename.split("/")[-1] not in [f["name"] for f in file_list if "name" in f]:
+                            raise Exception("PDF not found in bucket after upload")
+                        st.success(f"✅ PDF saved to bucket 'pdfs': {pdf_filename}")
+                        break
+                    except Exception as e:
+                        if attempt == 2:
+                            st.error(f"Error saving PDF to Supabase after 3 attempts: {e} (Path: {pdf_filename})")
+                            st.stop()
+                        time.sleep(1)  # Wait before retry
             except Exception as e:
-                st.error(f"Error saving PDF: {e}")
+                st.error(f"Error generating or saving PDF: {e}")
+                st.stop()
 
 elif tab == "📈 PnL Overview":
     st.header("📈 Live PnL Line Graph")
@@ -1396,12 +1483,24 @@ elif tab == "📁 Trade Archive":
     try:
         trades = supabase.table("trades").select("*").eq("trade_type", mode).eq("user_id", user_id).execute().data
         trades = sorted(trades, key=lambda x: x["time"], reverse=True)
-    except:
+    except Exception as e:
+        st.error(f"Error fetching trades: {e}")
         trades = []
 
     if not trades:
         st.info("No trades found for this mode.")
     else:
+        # Verify bucket existence
+        try:
+            buckets = supabase.storage.list_buckets()
+            bucket_names = [bucket.name for bucket in buckets]
+            if "pdfs" not in bucket_names or "screenshots" not in bucket_names:
+                st.error("❌ Required buckets ('pdfs' or 'screenshots') not found in Supabase. Please create them.")
+                st.stop()
+        except Exception as e:
+            st.error(f"Error checking storage buckets: {e}")
+            st.stop()
+
         for trade in trades:
             logo_path = f"logos/{sanitize_text(trade['symbol'])}.png"
             symbol_logo = ""
@@ -1451,30 +1550,48 @@ elif tab == "📁 Trade Archive":
                     st.markdown(f"**Reflection Notes:** {trade.get('reflection_notes', '-')}")
                     if trade.get("screenshot"):
                         try:
-                            st.image(trade["screenshot"])
+                            # Use signed URL for screenshot display if public access fails
+                            screenshot_name = trade["screenshot"].split("/")[-1]
+                            screenshot_path = f"{user_id}/{screenshot_name}"
+                            signed_url = supabase.storage.from_("screenshots").create_signed_url(screenshot_path, expires_in=60)["signedURL"]
+                            st.image(signed_url)
                         except:
-                            st.warning("⚠️ Screenshot not found.")
+                            st.warning(f"⚠️ Screenshot not found for trade {trade['trade_number']}: {screenshot_path}")
                     if trade.get("pdf_name"):
                         try:
-                            pdf_url = supabase.storage.from_("pdfs").get_public_url(trade["pdf_name"])
-                            st.download_button(
-                                label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
-                                data=requests.get(pdf_url).content,
-                                file_name=trade["pdf_name"],
-                                mime="application/pdf"
-                            )
+                            # Verify PDF exists before downloading
+                            pdf_path = trade["pdf_name"]  # e.g., 7265d9ec-8e98-4359-8849-9ece28234540/XAUUSD_20250729052627.pdf
+                            file_list = supabase.storage.from_("pdfs").list(path=user_id)
+                            file_names = [f["name"] for f in file_list if "name" in f]
+                            if pdf_path.split("/")[-1] not in file_names:
+                                st.warning(f"⚠️ PDF not found in bucket for trade {trade['trade_number']}: {pdf_path}")
+                            else:
+                                pdf_data = supabase.storage.from_("pdfs").download(pdf_path)
+                                st.download_button(
+                                    label=f"⬇️ Download PDF (Trade {trade['trade_number']})",
+                                    data=pdf_data,
+                                    file_name=pdf_path.split("/")[-1],  # Strip user_id/ for download
+                                    mime="application/pdf"
+                                )
                         except Exception as e:
-                            st.warning(f"⚠️ PDF not available: {e}")
+                            st.warning(f"⚠️ Unable to download PDF for trade {trade['trade_number']}: {e} (Path: {pdf_path})")
+                    else:
+                        st.info("ℹ️ No PDF available for this trade.")
                     if st.button(f"🗑️ Delete Trade {trade['trade_number']}", key=f"delete_{trade['time']}"):
                         try:
-                            try:
-                                if trade["pdf_name"]:
+                            # Delete PDF and screenshot with full paths
+                            if trade.get("pdf_name"):
+                                try:
                                     supabase.storage.from_("pdfs").remove([trade["pdf_name"]])
-                                if trade["screenshot"]:
+                                except Exception as e:
+                                    st.warning(f"⚠️ Failed to delete PDF {trade['pdf_name']}: {e}")
+                            if trade.get("screenshot"):
+                                try:
                                     screenshot_name = trade["screenshot"].split("/")[-1]
-                                    supabase.storage.from_("screenshots").remove([screenshot_name])
-                            except Exception as e:
-                                st.warning(f"⚠️ Failed to delete storage files: {e}")
+                                    screenshot_path = f"{user_id}/{screenshot_name}"
+                                    supabase.storage.from_("screenshots").remove([screenshot_path])
+                                except Exception as e:
+                                    st.warning(f"⚠️ Failed to delete screenshot {screenshot_path}: {e}")
                             supabase.table("trades").delete().eq("time", trade["time"]).eq("user_id", user_id).execute()
                             st.success(f"✅ Trade {trade['trade_number']} deleted")
                             st.rerun()
