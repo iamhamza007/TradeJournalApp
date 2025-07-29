@@ -1570,7 +1570,7 @@ elif tab == "💸 Deposits & Withdrawals":
                     "date": deposit_date.strftime("%Y-%m-%d"),
                     "notes": deposit_notes,
                     "trade_type": mode,
-                    "timestamp": datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "timestamp": datetime.now().strftime("%Y%m%d%H%M%S"),  # ✅ FIXED HERE
                     "user_id": user_id
                 }
                 supabase.table("deposits").insert(deposit).execute()
@@ -1592,7 +1592,7 @@ elif tab == "💸 Deposits & Withdrawals":
                     "date": withdrawal_date.strftime("%Y-%m-%d"),
                     "notes": withdrawal_notes,
                     "trade_type": mode,
-                    "timestamp": datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "timestamp": datetime.now().strftime("%Y%m%d%H%M%S"),  # ✅ FIXED HERE
                     "user_id": user_id
                 }
                 supabase.table("withdrawals").insert(withdrawal).execute()
@@ -1600,6 +1600,7 @@ elif tab == "💸 Deposits & Withdrawals":
                 st.rerun()
             except Exception as e:
                 st.error(f"Error adding withdrawal: {e}")
+
 
     st.markdown("### 📜 Transaction History")
     try:
