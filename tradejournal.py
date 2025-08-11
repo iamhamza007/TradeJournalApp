@@ -104,7 +104,7 @@ def save_current_mode(selected_mode):
 
 if "mode" not in st.session_state:
     st.session_state.mode = load_last_mode()
-mode = st.sidebar.radio("🧭 Mode", ["Real", "Demo"], index=0 if st.session_state.mode == "Real" else 1)
+mode = st.sidebar.radio("🧭 Mode", ["Real","Funded", "Demo"], index=0 if st.session_state.mode == "Real" else 1)
 if mode != st.session_state.mode:
     st.session_state.mode = mode
     save_current_mode(mode)
@@ -1489,7 +1489,13 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # --- Bucket + Folder ---
 PDF_BUCKET = "pdfs"
 mode = st.session_state.get("mode", "Demo")
-PDF_FOLDER = "real" if mode == "Real" else "demo"
+
+if mode == "Real":
+    PDF_FOLDER = "real"
+elif mode == "Funded":
+    PDF_FOLDER = "funded"
+else:
+    PDF_FOLDER = "demo"
 
 # --- Trade Archive Tab ---
 if tab == "📁 Trade Archive":
@@ -1549,6 +1555,7 @@ if tab == "📁 Trade Archive":
                         f'<iframe src="{public_url}" width="100%" height="500px" style="border:1px solid #ccc;"></iframe>',
                         unsafe_allow_html=True
                     )
+
 
 
 elif tab == "💸 Deposits & Withdrawals":
