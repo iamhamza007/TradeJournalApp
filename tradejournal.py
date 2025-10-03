@@ -104,7 +104,7 @@ def save_current_mode(selected_mode):
 
 if "mode" not in st.session_state:
     st.session_state.mode = load_last_mode()
-mode = st.sidebar.radio("🧭 Mode", ["Real", "Demo], index=0 if st.session_state.mode == "Real" else 1)
+mode = st.sidebar.radio("🧭 Mode", ["Real", "Demo"], index=0 if st.session_state.mode == "Real" else 1)
 if mode != st.session_state.mode:
     st.session_state.mode = mode
     save_current_mode(mode)
