@@ -825,7 +825,7 @@ elif tab == "📐 Calculators":
     multiplier = settings[pair]["multiplier"]
     pip_size = settings[pair]["pip"]
 
-    if tool == "Lot Size":
+   if tool == "Lot Size":
     st.subheader("🎯 Lot Size Calculator")
     balance = st.number_input("Account Balance ($)", format="%.2f")
     risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
@@ -845,6 +845,7 @@ elif tab == "📐 Calculators":
             effective_risk = risk_amount - commission_total
             lot_size_with_commission = effective_risk / (sl_pips * pip_size * multiplier)
             st.success(f"✅ Max Lot Size (after commission): **{lot_size_with_commission:.2f} lots**")
+
 
     elif tool == "Pip Value":
         st.subheader("📏 Pip Value + Distance Calculator")
