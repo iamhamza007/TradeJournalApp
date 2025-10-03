@@ -104,7 +104,7 @@ def save_current_mode(selected_mode):
 
 if "mode" not in st.session_state:
     st.session_state.mode = load_last_mode()
-mode = st.sidebar.radio("🧭 Mode", ["Real","Funded", "Demo"], index=0 if st.session_state.mode == "Real" else 1)
+mode = st.sidebar.radio("🧭 Mode", ["Real", "Demo], index=0 if st.session_state.mode == "Real" else 1)
 if mode != st.session_state.mode:
     st.session_state.mode = mode
     save_current_mode(mode)
@@ -377,14 +377,26 @@ with st.container():
                 f"<b>🗓 Last Trade</b><br>{last_trade}</div></div>", unsafe_allow_html=True)
                 
                 
-# Tabs
+# Tabs (organized logically)
 tabs = [
-    "📘 Journal", "🔥 Streak Tracker",
-    "💸 Deposits & Withdrawals", "📈 PnL Overview", "📊 Stats Dashboard", "🗓 Calendar View",
-    "📁 Trade Archive", "🧠 Edge Analysis", "🧪 Strategy Builder", "🌡 Setup Heatmap",
-    "📐 Calculators", "📍 Profit Roadmap Creator", "🪙 Currency Converter", "🛠️ Trade Tools",
+    # Trading Records
+    "📘 Journal",
+    "📁 Trade Archive",
+    "🗓 Calendar View",
+
+    # Money Management
+    "💸 Deposits & Withdrawals",
+    "📍 Profit Roadmap Creator",
+    "🪙 Currency Converter",
+
+    # Tools
+    "📐 Calculators",
+    "🛠️ Trade Tools",
+
+    # Extras
     "🎶 Motivational Music Time"
 ]
+
 tab = st.sidebar.radio("📁 Select Tab", tabs)
 
 # Strategy Manager in Sidebar
@@ -664,73 +676,6 @@ if tab == "📘 Journal":
                 st.error(f"Error generating or saving PDF: {e}")
                 st.stop()
 
-elif tab == "📈 PnL Overview":
-    st.header("📈 Live PnL Line Graph")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-
-    history_daily = {}
-    try:
-        trades = supabase.table("trades").select("entry_time, pnl").eq("trade_type", mode).eq("user_id", user_id).execute().data
-        for trade in trades:
-            date = trade["entry_time"].split(" ")[0]
-            pnl = trade["pnl"]
-            history_daily[date] = history_daily.get(date, 0) + pnl
-    except:
-        history_daily = {}
-
-    if not history_daily:
-        st.warning("No trades yet.")
-    else:
-        sorted_dates = sorted(history_daily.keys(), key=lambda x: datetime.datetime.strptime(x, "%d/%m/%Y"))
-        cum_pnl_values = []
-        daily_pnl_values = []
-        cum_pnl = 0
-        for date in sorted_dates:
-            daily = history_daily[date]
-            cum_pnl += daily
-            daily_pnl_values.append(daily)
-            cum_pnl_values.append(round(cum_pnl, 2))
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=sorted_dates,
-            y=cum_pnl_values,
-            mode='lines+markers',
-            name='Cumulative PnL',
-            line=dict(color='lime', width=2),
-            marker=dict(size=6)
-        ))
-        fig.add_trace(go.Scatter(
-            x=[sorted_dates[-1]],
-            y=[cum_pnl_values[-1]],
-            mode='markers+text',
-            name='Latest',
-            marker=dict(size=14, color='red', opacity=0.9, symbol='circle-open-dot'),
-            text=[f"${cum_pnl_values[-1]:.2f}"],
-            textposition='top center',
-            showlegend=False
-        ))
-        fig.add_trace(go.Bar(
-            x=sorted_dates,
-            y=daily_pnl_values,
-            name='Daily PnL',
-            yaxis='y2',
-            opacity=0.5,
-            marker_color='lightblue'
-        ))
-        fig.update_layout(
-            title=f"{mode} Account PnL Overview",
-            xaxis_title="Date",
-            yaxis=dict(title="Cumulative PnL"),
-            yaxis2=dict(title="Daily PnL", overlaying='y', side='right'),
-            template="plotly_dark",
-            height=500,
-            margin=dict(l=40, r=40, t=40, b=40),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
 elif tab == "🗓 Calendar View":
     st.header(f"🗓 {mode} Calendar View")
@@ -864,65 +809,6 @@ elif tab == "🛠️ Trade Tools":
     else:
         st.info("No trades found for this mode.")
 
-elif tab == "📊 Stats Dashboard":
-    st.header(f"📊 {mode} Stats Overview")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-    total_trades, wins, losses, total_pnl, total_pips = 0, 0, 0, 0, 0
-    setup_counts = {}
-
-    try:
-        trades = supabase.table("trades").select("*").eq("trade_type", mode).eq("user_id", user_id).execute().data
-        for t in trades:
-            total_trades += 1
-            total_pnl += t["pnl"]
-            if t["pnl"] > 0:
-                wins += 1
-            elif t["pnl"] < 0:
-                losses += 1
-            tags = [x.strip() for x in t["notes"].split() if x.startswith("#")]
-            for tag in tags:
-                setup_counts[tag] = setup_counts.get(tag, 0) + 1
-    except:
-        pass
-
-    st.metric("Total Trades", total_trades)
-    st.metric("Total PnL", f"${total_pnl:.2f}")
-    if total_trades > 0:
-        win_rate = (wins / total_trades) * 100
-        st.metric("Win Rate", f"{win_rate:.1f}%")
-
-    st.markdown("### 🔖 Most Used Tags")
-    if setup_counts:
-        tag_df = pd.DataFrame(list(setup_counts.items()), columns=["Tag", "Count"])
-        st.bar_chart(tag_df.set_index("Tag"))
-    else:
-        st.info("No setup tags used yet.")
-
-elif tab == "🌡 Setup Heatmap":
-    st.header(f"🌡 Setup Frequency Heatmap ({mode})")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-    tag_freq = {}
-
-    try:
-        trades = supabase.table("trades").select("notes").eq("trade_type", mode).eq("user_id", user_id).execute().data
-        for t in trades:
-            tags = [x for x in t["notes"].split() if x.startswith("#")]
-            for tag in tags:
-                tag_freq[tag] = tag_freq.get(tag, 0) + 1
-    except:
-        tag_freq = {}
-
-    if tag_freq:
-        heatmap_df = pd.DataFrame(sorted(tag_freq.items(), key=lambda x: -x[1]), columns=["Setup", "Frequency"])
-        st.dataframe(heatmap_df)
-        st.bar_chart(heatmap_df.set_index("Setup"))
-    else:
-        st.info("No setups found yet.")
-
 elif tab == "📐 Calculators":
     st.header("📐 Multi-Tool Trading Calculator")
     tool = st.radio("🧮 Choose Calculator", ["Lot Size", "Pip Value", "Risk Amount", "PnL"], horizontal=True)
@@ -940,14 +826,20 @@ elif tab == "📐 Calculators":
     pip_size = settings[pair]["pip"]
 
     if tool == "Lot Size":
-        st.subheader("🎯 Lot Size Calculator")
-        balance = st.number_input("Account Balance ($)", format="%.2f")
-        risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
-        sl_pips = st.number_input("Stop Loss (pips)", format="%.2f")
-        if sl_pips > 0:
-            risk_amount = (risk_percent / 100) * balance
-            lot_size = risk_amount / (sl_pips * pip_size * multiplier)
-            st.success(f"✅ Max Lot Size: **{lot_size:.2f} lots**")
+    st.subheader("🎯 Lot Size Calculator")
+    balance = st.number_input("Account Balance ($)", format="%.2f")
+    risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
+    sl_pips = st.number_input("Stop Loss (pips)", format="%.2f")
+    commission_per_lot = st.number_input("Commission per lot ($)", format="%.2f", value=0.0)
+
+    if sl_pips > 0:
+        risk_amount = (risk_percent / 100) * balance
+        lot_size_before_commission = risk_amount / (sl_pips * pip_size * multiplier)
+        commission_total = lot_size_before_commission * commission_per_lot
+        effective_risk = risk_amount - commission_total
+        lot_size = effective_risk / (sl_pips * pip_size * multiplier)
+
+        st.success(f"✅ Max Lot Size: **{lot_size:.2f} lots**")
 
     elif tool == "Pip Value":
         st.subheader("📏 Pip Value + Distance Calculator")
@@ -1325,156 +1217,6 @@ elif tab == "🪙 Currency Converter":
                     st.success(f"Result: {result}")
                 except:
                     st.error("❌ Invalid expression.")
-elif tab == "🔥 Streak Tracker":
-    st.header(f"🔥 {mode} Streak Tracker")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-
-    def load_streak_data():
-        try:
-            trades = supabase.table("trades").select("entry_time, pnl").eq("trade_type", mode).eq("user_id", user_id).execute().data
-            trades.sort(key=lambda x: x["entry_time"])
-            return trades
-        except:
-            return []
-
-    trades = load_streak_data()
-    if not trades:
-        st.info("No trades found for this mode.")
-    else:
-        streaks = []
-        current_streak = {"type": None, "count": 0, "start_date": None}
-        for trade in trades:
-            date = trade["entry_time"].split(" ")[0]
-            if trade["pnl"] > 0:
-                outcome = "Win"
-            elif trade["pnl"] < 0:
-                outcome = "Loss"
-            else:
-                continue
-
-            if current_streak["type"] is None:
-                current_streak = {"type": outcome, "count": 1, "start_date": date}
-            elif current_streak["type"] == outcome:
-                current_streak["count"] += 1
-            else:
-                streaks.append(current_streak)
-                current_streak = {"type": outcome, "count": 1, "start_date": date}
-        streaks.append(current_streak)
-
-        if streaks:
-            st.markdown("### 🔥 Current Streak")
-            current = streaks[-1]
-            streak_emoji = "🏆" if current["type"] == "Win" else "😓"
-            st.markdown(f"{streak_emoji} {current['count']} {current['type']}{'s' if current['count'] > 1 else ''} (Started: {current['start_date']})")
-            
-            st.markdown("### 📜 Streak History")
-            for streak in reversed(streaks[:-1]):
-                streak_emoji = "🏆" if streak["type"] == "Win" else "😓"
-                st.write(f"{streak_emoji} {streak['count']} {streak['type']}{'s' if streak['count'] > 1 else ''} (Started: {streak['start_date']})")
-        else:
-            st.info("No streaks recorded yet.")
-
-elif tab == "🧠 Edge Analysis":
-    st.header(f"🧠 {mode} Edge Analysis")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-
-    try:
-        trades = supabase.table("trades").select("*").eq("trade_type", mode).eq("user_id", user_id).execute().data
-    except:
-        trades = []
-
-    if not trades:
-        st.info("No trades found for this mode.")
-    else:
-        strategy_performance = {}
-        for trade in trades:
-            for strategy in trade["strategies"]:
-                if strategy not in strategy_performance:
-                    strategy_performance[strategy] = {"wins": 0, "losses": 0, "total_pnl": 0}
-                if trade["pnl"] > 0:
-                    strategy_performance[strategy]["wins"] += 1
-                elif trade["pnl"] < 0:
-                    strategy_performance[strategy]["losses"] += 1
-                strategy_performance[strategy]["total_pnl"] += trade["pnl"]
-
-        if strategy_performance:
-            st.markdown("### 📊 Strategy Performance")
-            for strategy, stats in strategy_performance.items():
-                total_trades = stats["wins"] + stats["losses"]
-                win_rate = (stats["wins"] / total_trades * 100) if total_trades > 0 else 0
-                st.markdown(
-                    f"""
-                    <div style='background:#111; padding:10px; border-radius:8px; margin-bottom:10px;'>
-                        <b>{strategy}</b><br>
-                        Wins: {stats["wins"]} | Losses: {stats["losses"]} | Win Rate: {win_rate:.1f}%<br>
-                        Total PnL: <span style='color:{"lime" if stats["total_pnl"] >= 0 else "red"};'>${stats["total_pnl"]:.2f}</span>
-                    </div>
-                    """, unsafe_allow_html=True
-                )
-        else:
-            st.info("No strategy performance data available.")
-
-elif tab == "🧪 Strategy Builder":
-    st.header(f"🧪 {mode} Strategy Builder")
-    user_id = check_authentication()
-    if not user_id:
-        st.stop()
-
-    try:
-        strategies = supabase.table("strategy_builder").select("*").eq("trade_type", mode).eq("user_id", user_id).execute().data
-        strategy_names = [s["name"] for s in strategies]
-    except:
-        strategies = []
-        strategy_names = []
-
-    with st.form("strategy_form"):
-        strategy_name = st.text_input("Strategy Name", placeholder="e.g. Breakout Strategy")
-        entry_rules = st.text_area("📥 Entry Rules")
-        exit_rules = st.text_area("📤 Exit Rules")
-        risk_management = st.text_area("⚖️ Risk Management")
-        notes = st.text_area("📝 Notes")
-        submit_strategy = st.form_submit_button("✅ Save Strategy")
-
-        if submit_strategy:
-            try:
-                strategy_data = {
-                    "name": strategy_name,
-                    "entry_rules": entry_rules,
-                    "exit_rules": exit_rules,
-                    "risk_management": risk_management,
-                    "notes": notes,
-                    "trade_type": mode,
-                    "user_id": user_id
-                }
-                supabase.table("strategy_builder").upsert(strategy_data).execute()
-                st.success(f"✅ Strategy '{strategy_name}' saved")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error saving strategy: {e}")
-
-    if strategies:
-        st.markdown("### 📋 Saved Strategies")
-        selected_strategy = st.selectbox("Select Strategy to View", strategy_names)
-        if selected_strategy:
-            strategy = next(s for s in strategies if s["name"] == selected_strategy)
-            st.markdown(f"""
-            **{strategy['name']}**<br>
-            **Entry Rules:** {strategy.get('entry_rules', '-')}<br>
-            **Exit Rules:** {strategy.get('exit_rules', '-')}<br>
-            **Risk Management:** {strategy.get('risk_management', '-')}<br>
-            **Notes:** {strategy.get('notes', '-')}<br>
-            """, unsafe_allow_html=True)
-            if st.button(f"🗑️ Delete '{selected_strategy}'"):
-                try:
-                    supabase.table("strategy_builder").delete().eq("name", selected_strategy).eq("trade_type", mode).eq("user_id", user_id).execute()
-                    st.success(f"✅ Strategy '{selected_strategy}' deleted")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error deleting strategy: {e}")
 
 import streamlit as st
 from supabase import create_client
