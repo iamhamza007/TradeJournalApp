@@ -825,27 +825,26 @@ elif tab == "📐 Calculators":
     multiplier = settings[pair]["multiplier"]
     pip_size = settings[pair]["pip"]
 
-   if tool == "Lot Size":
-    st.subheader("🎯 Lot Size Calculator")
-    balance = st.number_input("Account Balance ($)", format="%.2f")
-    risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
-    sl_pips = st.number_input("Stop Loss (pips)", format="%.2f")
+    if tool == "Lot Size":
+        st.subheader("🎯 Lot Size Calculator")
+        balance = st.number_input("Account Balance ($)", format="%.2f")
+        risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
+        sl_pips = st.number_input("Stop Loss (pips)", format="%.2f")
 
-    if sl_pips > 0:
-        risk_amount = (risk_percent / 100) * balance
-        lot_size = risk_amount / (sl_pips * pip_size * multiplier)
+        if sl_pips > 0:
+            risk_amount = (risk_percent / 100) * balance
+            lot_size = risk_amount / (sl_pips * pip_size * multiplier)
 
-        # Original lot size (no commission)
-        st.success(f"✅ Max Lot Size (without commission): **{lot_size:.2f} lots**")
+            # Original lot size (no commission)
+            st.success(f"✅ Max Lot Size (without commission): **{lot_size:.2f} lots**")
 
-        # Commission logic (added at the end)
-        commission_per_lot = st.number_input("Commission per lot ($)", format="%.2f", value=0.0)
-        if commission_per_lot > 0:
-            commission_total = lot_size * commission_per_lot
-            effective_risk = risk_amount - commission_total
-            lot_size_with_commission = effective_risk / (sl_pips * pip_size * multiplier)
-            st.success(f"✅ Max Lot Size (after commission): **{lot_size_with_commission:.2f} lots**")
-
+            # Commission logic (added at the end)
+            commission_per_lot = st.number_input("Commission per lot ($)", format="%.2f", value=0.0)
+            if commission_per_lot > 0:
+                commission_total = lot_size * commission_per_lot
+                effective_risk = risk_amount - commission_total
+                lot_size_with_commission = effective_risk / (sl_pips * pip_size * multiplier)
+                st.success(f"✅ Max Lot Size (after commission): **{lot_size_with_commission:.2f} lots**")
 
     elif tool == "Pip Value":
         st.subheader("📏 Pip Value + Distance Calculator")
@@ -890,6 +889,7 @@ elif tab == "📐 Calculators":
                 {pnl_color} <b>Net PnL:</b> ${net_pnl:.2f}
             </div>
             """, unsafe_allow_html=True)
+
 
 elif tab == "📍 Profit Roadmap Creator":
     st.header("📍 Profit Roadmap Creator")
