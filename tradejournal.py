@@ -834,12 +834,16 @@ elif tab == "📐 Calculators":
 
     if sl_pips > 0:
         risk_amount = (risk_percent / 100) * balance
+        # Adjusting for commission
         lot_size_before_commission = risk_amount / (sl_pips * pip_size * multiplier)
         commission_total = lot_size_before_commission * commission_per_lot
         effective_risk = risk_amount - commission_total
-        lot_size = effective_risk / (sl_pips * pip_size * multiplier)
 
-        st.success(f"✅ Max Lot Size: **{lot_size:.2f} lots**")
+        if effective_risk > 0:
+            lot_size = effective_risk / (sl_pips * pip_size * multiplier)
+            st.success(f"✅ Max Lot Size (after commission): **{lot_size:.2f} lots**")
+        else:
+            st.error("❌ Commission is too high compared to risk amount!")
 
     elif tool == "Pip Value":
         st.subheader("📏 Pip Value + Distance Calculator")
