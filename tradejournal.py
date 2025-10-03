@@ -830,20 +830,21 @@ elif tab == "📐 Calculators":
     balance = st.number_input("Account Balance ($)", format="%.2f")
     risk_percent = st.slider("Risk %", 0.1, 10.0, 1.0)
     sl_pips = st.number_input("Stop Loss (pips)", format="%.2f")
-    commission_per_lot = st.number_input("Commission per lot ($)", format="%.2f", value=0.0)
 
     if sl_pips > 0:
         risk_amount = (risk_percent / 100) * balance
-        # Adjusting for commission
-        lot_size_before_commission = risk_amount / (sl_pips * pip_size * multiplier)
-        commission_total = lot_size_before_commission * commission_per_lot
-        effective_risk = risk_amount - commission_total
+        lot_size = risk_amount / (sl_pips * pip_size * multiplier)
 
-        if effective_risk > 0:
-            lot_size = effective_risk / (sl_pips * pip_size * multiplier)
-            st.success(f"✅ Max Lot Size (after commission): **{lot_size:.2f} lots**")
-        else:
-            st.error("❌ Commission is too high compared to risk amount!")
+        # Original lot size (no commission)
+        st.success(f"✅ Max Lot Size (without commission): **{lot_size:.2f} lots**")
+
+        # Commission logic (added at the end)
+        commission_per_lot = st.number_input("Commission per lot ($)", format="%.2f", value=0.0)
+        if commission_per_lot > 0:
+            commission_total = lot_size * commission_per_lot
+            effective_risk = risk_amount - commission_total
+            lot_size_with_commission = effective_risk / (sl_pips * pip_size * multiplier)
+            st.success(f"✅ Max Lot Size (after commission): **{lot_size_with_commission:.2f} lots**")
 
     elif tool == "Pip Value":
         st.subheader("📏 Pip Value + Distance Calculator")
